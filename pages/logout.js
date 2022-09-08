@@ -3,7 +3,6 @@ import { useRouter } from 'next/router'
 import Router from 'next/router'
 import { useEffect } from 'react'
 import Loading from '../utils/components/Loading'
-import Navbar from '../utils/components/navbar'
 import { registerUser } from '../utils/registerUser'
 import { logout } from '../utils/logout'
 

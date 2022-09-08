@@ -3,7 +3,6 @@ import { onAuthStateChanged } from 'firebase/auth'
 import Head from 'next/head'
 import React, { useEffect } from 'react'
 import AuthForm from '../utils/components/AuthForm'
-import Navbar from '../utils/components/navbar'
 import Router from 'next/router'
 import { formatCode } from '../utils/authErrorCode'
 
