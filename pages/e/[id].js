@@ -141,7 +141,7 @@ export default function NewNote() {
             {
                 realOwner ? 
                     <>
-                        <img className='w-screen' src={docData.banner} />
+                        <div className='w-screen' style={{height: '25vh', backgroundColor: docData.banner}}></div>
 
                         <div className="inline-flex rounded-md shadow-sm ml-10 mt-5" role="group">
                             <button type="button" className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-l-lg border border-gray-200 hover:bg-gray-100 hover:text-teal-700 focus:z-10 focus:ring-2 focus:ring-teal-700 focus:text-teal-700" onClick={getEditorContent}>

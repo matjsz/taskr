@@ -2,12 +2,17 @@ import { doc, addDoc, collection } from 'firebase/firestore'
 import { db } from './firebase'
 
 const createNote = async (owner) => {
-    const request = await fetch('https://random.imagecdn.app/v1/image?width=1360&height=200&format=json')
-    const data = await request.json()
-    let bannerUrl = data.url
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
 
     const ref = await addDoc(collection(db, "notes"), {
-            banner: bannerUrl,
+            banner: getRandomColor(),
             content: "Olá! Esta é sua nova anotação.",
             createdOn: new Date(),
             owner: owner,
