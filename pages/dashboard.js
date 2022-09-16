@@ -1,4 +1,4 @@
-import { auth } from '../utils/firebase'
+import { auth, db } from '../utils/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import Head from 'next/head'
 import React, { useEffect, useState } from 'react'
@@ -6,10 +6,17 @@ import AuthForm from '../utils/components/AuthForm'
 import Router from 'next/router'
 import NotesArea from '../utils/components/NotesArea'
 import Loading from '../utils/components/Loading'
+import { getAllLists } from '../utils/getAllLists'
+import { getAllNotes } from '../utils/getAllNotes'
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore'
+import { removeFromList } from '../utils/removeFromList'
+import { addToList } from '../utils/addToList'
 
 // Página da Dashboard
 export default function Dashboard() {
     const [logged, changeLogged] = useState(false)
+    const [lists, changeLists] = useState([])
+    const [notes, changeNotes] = useState([])
     const [user, changeUser] = useState({})
 
     useEffect(() => {
@@ -17,6 +24,10 @@ export default function Dashboard() {
         onAuthStateChanged(auth, (u) => {
             if(u){
                 changeLogged(true)
+                getAllLists(u.uid)
+                    .then((ls) => {changeLists(ls)})
+                getAllNotes(u.uid)
+                    .then((ns) => {changeNotes(ns)})
                 changeUser(u)
 
                 console.log(u)
@@ -25,6 +36,19 @@ export default function Dashboard() {
             }
         })
     })
+
+    const deleteList = (listID) => {
+        getDoc(doc(db, "lists", listID))
+            .then((data) => {
+                data.data().notes.forEach((note) => {
+                    updateDoc(doc(db, "notes", note), {
+                        list: 'none'
+                    }).then(() => {
+                        deleteDoc(doc(db, "lists", listID))
+                    })
+                })
+            })
+    }
 
     // Layout da página
     return (
@@ -85,7 +109,7 @@ export default function Dashboard() {
                 </div>
             </nav>
 
-            <div className='bg-teal-700 h-screen'>
+            <div className='bg-teal-700' style={{minHeight: '100vh'}}>
             {
                 logged ? 
                     <>
@@ -94,33 +118,79 @@ export default function Dashboard() {
                                 <div
                                 className="grid grid-cols-1 lg:grid-cols-2 gap-y-8 lg:gap-x-16 lg:items-center"
                                 >
-                                <div className="max-w-lg mx-auto text-center lg:ml-10 lg:text-left lg:mx-0">
-                                    <img className="inline-block h-12 w-12 mb-5 bg-white rounded-full ring-2 ring-white" src={user.photoURL}/>
-                                    <h2 className="text-3xl text-white font-bold sm:text-4xl">Olá, {user.displayName}!</h2>
+                                    <div className="md:absolute top-20 mt-10 left-5 max-w-lg mx-auto text-center lg:ml-10 lg:text-left lg:mx-0">
+                                        <img className="inline-block h-12 w-12 mb-5 bg-white rounded-full ring-2 ring-white" src={user.photoURL}/>
+                                        <h2 className="text-3xl text-white font-bold sm:text-4xl">Olá, {user.displayName}!</h2>
 
-                                    <p className="mt-4 text-white">
-                                    Bem-vindo à sua Dashboard.
+                                        <p className="mt-4 text-white">
+                                        Bem-vindo à sua Dashboard.
 
-                                    
-                                    </p>
-                                </div>
+                                        <a
+                                        className="block w-60 mt-5 p-4 shadow-sm rounded-xl focus:outline-none bg-teal-800 focus:ring hover:border-teal-900 hover:ring-1 hover:ring-teal-900"
+                                        href="/e/new"
+                                        style={{minHeight: '7rem'}}
+                                        >
+                                            <center>
+                                                <h6 className="mt-2 text-white font-bold">
+                                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                                </h6>
+                                            </center>
+                                            <h6 className="mt-2 text-white font-bold text-center">Nova anotação</h6>
+                                        </a>                                    
+                                        </p>
+                                    </div>
 
-                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                                    <a
-                                    className="block p-4 border border-gray-100 bg-white shadow-sm rounded-xl focus:outline-none focus:ring hover:border-gray-200 hover:ring-1 hover:ring-gray-200"
-                                    href="/e/new"
-                                    style={{minHeight: '10rem'}}
-                                    >
-                                        <center>
-                                            <h6 className="mt-8 text-teal-700 font-bold">
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                                            </h6>
-                                        </center>
-                                        <h6 className="mt-2 text-teal-700 font-bold text-center">Nova anotação</h6>
-                                    </a>
-                                    
-                                    <NotesArea owner={user.uid} />
-                                </div>
+                                    <div class="" style={{minWidth: '10rem'}}>
+
+                                    </div>
+
+                                    <div>
+                                        {
+                                            notes.length > 0 ? notes.map((note) => {
+                                                return note.data.list == 'none' ? <h3 className="text-1xl text-white sm:text-2xl mb-4">Anotações sem lista</h3> : <></>
+                                            }) : <></>
+                                        }
+                                        {
+                                            notes.length > 0 ? notes.map((note) => {
+                                                return note.data.list == 'none' ? <>
+                                                    <div className="grid mb-4 grid-cols-2 gap-4 sm:grid-cols-3">
+                                                        <NotesArea owner={user.uid} listID='none' />
+                                                    </div>
+                                                </> : <></>
+                                            }) : <section class="bg-teal-700">
+                                            <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
+                                                <div class="mx-auto max-w-screen-sm text-center">
+                                                    <p class="mb-4 text-3xl tracking-tight font-bold text-white md:text-4xl">Ainda não há anotações.</p>
+                                                    <p class="mb-4 text-lg font-light text-white">Crie uma nova anotação para começar sua jornada!</p>
+                                                </div>   
+                                            </div>
+                                        </section>
+                                        }
+                                        {
+                                            lists.map((list) => {
+                                                list.data.notes.length > 0 ? <div class="inline-flex mt-5 justify-center items-center w-full">
+                                                <div class="text-center px-4 text-2xl text-white bg-teal-700">
+                                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"></path></svg>
+                                                </div>
+                                            </div> : <></>
+                                            })
+                                        }
+                                        {
+                                            lists.map((list) => {
+                                                return list.data.notes.length > 0 ? <>
+                                                    <div class="flex gap-4 mb-5">
+                                                        <h3 className="text-2xl text-white font-bold sm:text-3xl">{list.data.name}</h3>
+                                                        <button type="button" className=" my-auto text-sm font-medium text-white bg-none rounded-md hover:bg-red-700 hover:text-white focus:z-10 focus:ring-2 focus:ring-red-700 focus:text-white" onClick={() => {deleteList(list.id)}}>
+                                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid mb-4 grid-cols-2 gap-4 sm:grid-cols-3">
+                                                        <NotesArea owner={user.uid} listID={list.id} />
+                                                    </div>
+                                                </> : <></>
+                                            })
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         </section>

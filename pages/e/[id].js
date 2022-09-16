@@ -8,10 +8,14 @@ import { auth } from '../../utils/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { createNote } from '../../utils/createNote'
 import { getNote } from '../../utils/getNote'
+import { getAllLists } from '../../utils/getAllLists'
+import { createList } from '../../utils/createList'
 import { db } from '../../utils/firebase'
-import { deleteDoc, doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore"
+import { arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { addToList } from '../../utils/addToList'
+import { removeFromList } from '../../utils/removeFromList'
 
 export default function NewNote() {
     // Aqui, o useRouter é usado para capturar os parâmetros de URL (por exemplo: em https://link.com?p=Teste, "p" é um parâmetro de URL)
@@ -25,17 +29,64 @@ export default function NewNote() {
     const [titleContent, changeTitle] = useState('')
     const [firstLoad, changeFirstLoad] = useState(true)
     const [realOwner, changeRealOwner] = useState(true)
+    const [listSelected, changeListSelected] = useState('')
+    const [tagSelected, changeTagSelected] = useState('')
+    const [listData, changeListData] = useState({})
+    const [listName, changeListName] = useState('')
+    const [tagDoc, changeTagDoc] = useState({})
+    const [tagData, changeTagData] = useState([])
+    const [tagName, changeTagName] = useState('')
+    const [tagInput, changeTagInput] = useState('')
+    const [listInput, changeListInput] = useState('')
+    const [listsData, changeListsData] = useState([])
 
     useEffect(() => {
         if(logged){
             getDoc(doc(db, "notes", id))
-                .then((doc) => {
+                .then((docSnap) => {
                     try{    
-                        if(doc.data().owner == user.uid){
+                        if(docSnap.data().owner == user.uid){
                             if(firstLoad){
-                                changeDocData(doc.data())
-                                changeEditor(doc.data().content)
-                                changeTitle(doc.data().title)
+                                changeDocData(docSnap.data())
+                                changeEditor(docSnap.data().content)
+                                changeTitle(docSnap.data().title)
+                                changeTagSelected(docSnap.data().tag)
+                                changeListSelected(docSnap.data().list)
+                                
+                                getDoc(doc(db, "tags", user.uid))
+                                    .then((tag) => {
+                                        if(tag.exists()){
+                                            console.log(tag.data().tags)
+                                            changeTagData(tag.data().tags)
+                                            changeTagDoc(tag.data())
+                                            changeTagName(tag.data()[docSnap.data().tag])
+                                            changeTagInput(tag.data()[docSnap.data().tag])   
+                                        } else{
+                                            changeTagData({name: 'Nenhuma', color: 'gray'})
+                                        }
+                                    })
+                                    .catch((e) => {})
+
+                                if(docSnap.data().list == "none"){
+                                    changeListData({name: 'Nenhuma'})
+                                } else{
+                                    getDoc(doc(db, "lists", docSnap.data().list))
+                                        .then((list) => {
+                                            if(list.exists()){
+                                                changeListData(list.data())
+                                                changeListInput(list.data().name)
+                                            } else{
+                                                changeListData({})
+                                            }
+                                        })
+                                        .catch((e) => {})
+                                }
+
+                                getAllLists(user.uid)
+                                    .then((lists) => {
+                                        changeListsData(lists)
+                                    })
+                                
                                 changeFirstLoad(false)
                             }
                         } else{
@@ -43,6 +94,7 @@ export default function NewNote() {
                         }
                     } catch(e){}
                 })
+                .catch((e) => {})
         }
             // Checa se o usuário está logado ou não, caso não esteja ele é redirecionado para a página de autenticação (auth.js ou URL: /auth)
             onAuthStateChanged(auth, (u) => {
@@ -63,21 +115,131 @@ export default function NewNote() {
         changeEditor(e.target.value)   
     }
 
+    const getTagColor = (tag) => {
+        const tags = {
+            done: 'green',
+            undone: 'red',
+            doing: 'orange',
+            none: 'gray'
+        }
+
+        return tags[tag]
+    }
+
     const changeTitleContent = (e) => {
         changeTitle(e.target.value)
+    }
+
+    const changeTag = (value) => {
+        changeTagSelected(value)
+        changeTagInput(tagDoc[value])
+    }
+
+    const handleNewList = (e) => {
+        createList(user.uid)
+
+        getAllLists(user.uid)
+            .then((lists) => {
+                changeListsData(lists)
+            })
+    }
+
+    const changeList = (value, name) => {
+        changeListSelected(value)
+        changeListName(name)
+        changeListInput(name)
     }
 
     const saveChanges = () => {
         updateDoc(doc(db, "notes", id), {
             title: titleContent,
             content: editorContent,
-            updatedOn: new Date()
+            updatedOn: new Date(),
+            tag: tagSelected,
+            list: listSelected
         })
+        .catch((e) => {})
+
+        if(tagSelected == 'doing'){
+            var t = tagDoc.tags[2]
+            updateDoc(doc(db, "tags", user.uid), {
+                "doing": tagInput,
+                "tags": arrayRemove(t)
+            }).then(() => {
+                t.name = tagInput
+
+                updateDoc(doc(db, "tags", user.uid), {
+                    "doing": tagInput,
+                    "tags": arrayUnion(t)
+                })
+            })
+        }
+        if(tagSelected == 'done'){
+            var t = tagDoc.tags[0]
+            updateDoc(doc(db, "tags", user.uid), {
+                "done": tagInput,
+                "tags": arrayRemove(t)
+            }).then(() => {
+                t.name = tagInput
+
+                updateDoc(doc(db, "tags", user.uid), {
+                    "done": tagInput,
+                    "tags": arrayUnion(t)
+                })
+            })
+        }
+        if(tagSelected == 'none'){
+            var t = tagDoc.tags[3]
+            updateDoc(doc(db, "tags", user.uid), {
+                none: tagInput,
+                tags: arrayRemove(t)
+            }).then(() => {
+                t.name = tagInput
+                updateDoc(doc(db, "tags", user.uid), {
+                    none: tagInput,
+                    tags: arrayUnion(t)
+                })
+            })
+        }
+        if(tagSelected == 'undone'){
+            var t = tagDoc.tags[1] 
+            updateDoc(doc(db, "tags", user.uid), {
+                "undone": tagInput,
+                "tags": arrayRemove(t)
+            }).then(() => {
+                t.name = tagInput
+
+                updateDoc(doc(db, "tags", user.uid), {
+                    "undone": tagInput,
+                    "tags": arrayUnion(t)
+                })
+            })
+        }
+
+        if(listSelected != 'none'){
+            updateDoc(doc(db, "lists", listSelected), {
+                name: listInput
+            })
+        }
+        
+        removeFromList(docData.list, id)
+            .catch((e) => {})
+        addToList(listSelected, id)
+            .catch((e) => {})
+
         changeFirstLoad(true)
     }
 
     const deleteNote = () => {
         Router.push('/e/d/'+id)
+    }
+
+    const handleTagInput = (e) => {
+        changeTagInput(e.target.value)
+    }
+
+    const handleListInput = (e) => {
+        changeListInput(e.target.value)
     }
 
     // Layout da página
@@ -143,7 +305,7 @@ export default function NewNote() {
                     <>
                         <div className='w-screen' style={{height: '25vh', backgroundColor: docData.banner}}></div>
 
-                        <div className="inline-flex rounded-md shadow-sm ml-10 mt-5" role="group">
+                        <div className="inline-flex flex-wrap rounded-md shadow-sm ml-10 mt-5" role="group">
                             <button type="button" className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-l-lg border border-gray-200 hover:bg-gray-100 hover:text-teal-700 focus:z-10 focus:ring-2 focus:ring-teal-700 focus:text-teal-700" onClick={getEditorContent}>
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             </button>
@@ -151,11 +313,85 @@ export default function NewNote() {
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                             </button>
                             <button type="button" className="py-2 px-4 ml-5 text-sm font-medium text-white bg-teal-600 rounded-md border border-gray-200 hover:bg-teal-700 hover:text-white focus:z-10 focus:ring-2 focus:ring-teal-700 focus:text-white" onClick={saveChanges}>
-                                Salvar
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"></path></svg>
                             </button>
                             <button type="button" className="py-2 px-4 ml-1 text-sm font-medium text-white bg-red-600 rounded-md border border-gray-200 hover:bg-red-700 hover:text-white focus:z-10 focus:ring-2 focus:ring-red-700 focus:text-white" onClick={deleteNote}>
-                                Excluir
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
                             </button>
+                            
+                            <div class="sm:absolute right-5">
+                            <button id="dropdownHelperRadioButton" data-dropdown-toggle="dropdownHelperRadio" class={`ml-1 mt-5 sm:mt-0 bg-${getTagColor(tagSelected)}-200 hover:bg-${getTagColor(tagSelected)}-300 focus:ring-4 focus:outline-none focus:ring-${getTagColor(tagSelected)}-100 text-${getTagColor(tagSelected)}-900 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center`} type="button"> 
+                                <input className={`bg-${getTagColor(tagSelected)}-200 hover:bg-${getTagColor(tagSelected)}-300 text-${getTagColor(tagSelected)}-900`} value={tagInput} onChange={handleTagInput} />
+                                <svg class="ml-2 w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div id="dropdownHelperRadio" class="hidden z-10 bg-white rounded divide-y divide-gray-100 shadow" data-popper-reference-hidden="" data-popper-escaped="" data-popper-placement="bottom" style={{position: 'absolute', inset: '0px auto auto 0px', margin: '0px', transform: 'translate(0px, 10px)'}}>
+                                <ul class="p-3 space-y-1 text-sm text-gray-700 " aria-labelledby="dropdownHelperRadioButton">
+                                    {
+                                        tagData.map((tag) => {
+                                            return <li>
+                                                <div class={`flex p-2 rounded g-${tag.color}-100 text-${tag.color}-800 text-md font-medium mr-2 px-2.5 py-0.5 hover:bg-${getTagColor(tag.color)}-300 cursor-pointer rounded bg-${tag.color}-200 text-${tag.color}-900`} onClick={() => {changeTag(tag.value)}}>
+                                                    <div class="flex items-center h-5">
+                                                        <input id={`helper-radio-${tag.name}`} name="helper-radio" type="radio" value={tag.value} class="hidden peer"/>
+                                                    </div>
+                                                    <div class={`hover:bg-${getTagColor(tag.color)}-300`}>
+                                                        <label for={`helper-radio-${tag.name}`} class={ `font-medium text-center cursor-pointer hover:bg-${getTagColor(tag.color)}-300`}>
+                                                            <div>{tag.name}</div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        })  
+                                    }
+                                </ul>
+                            </div>
+
+                            <button id="dropdownHelperRadioButtonList" data-dropdown-toggle="dropdownHelperRadioList" class={`text-white ml-1 mt-5 sm:mt-0 bg-gray-500 hover:bg-gray-600 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center`} type="button">
+                                {listSelected == 'none' ? 'Nenhuma' : <input className={`bg-gray-500 hover:bg-gray-600 text-gray-white`} value={listInput} onChange={handleListInput} />}
+                                <svg class="ml-2 w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                            <div id="dropdownHelperRadioList" class="hidden z-10 bg-white rounded divide-y divide-gray-100 shadow" data-popper-reference-hidden="" data-popper-escaped="" data-popper-placement="bottom" style={{position: 'absolute', inset: '0px auto auto 0px', margin: '0px', transform: 'translate(0px, 10px)'}}>
+                                <ul class="p-3 space-y-1 text-sm text-gray-700 " aria-labelledby="dropdownHelperRadioButtonList">
+                                    <li>
+                                        <div class={`flex p-2 rounded hover:bg-gray-600 bg-gray-500 text-gray-100`} onClick={() => {changeList('none', 'Nenhuma')}}>
+                                            <div class="flex items-center h-5">
+                                                <input id={`helper-radio-${'Nenhuma'}-list`} name="helper-radio" type="radio" value="" class="hidden peer"/>
+                                            </div>
+                                            <div class="">
+                                                <label for={`helper-radio-${'Nenhuma'}-list`} class="font-medium text-center">
+                                                    <div>{'Nenhuma'}</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    {
+                                        listsData.map((list) => {
+                                            return <li>
+                                                <div class={`flex p-2 rounded hover:bg-gray-600 bg-gray-500 text-gray-100`} onClick={() => {changeList(list.id, list.data.name)}}>
+                                                    <div class="flex items-center h-5">
+                                                        <input id={`helper-radio-${list.data.name}-list`} name="helper-radio" type="radio" value="" class="hidden peer"/>
+                                                    </div>
+                                                    <div class="">
+                                                        <label for={`helper-radio-${list.data.name}-list`} class="font-medium text-center">
+                                                            <div>{list.data.name}</div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        })  
+                                    }
+                                </ul>
+                                <div class={`flex p-2 cursor-pointer rounded hover:bg-teal-700 bg-teal-600 text-gray-100`} onClick={handleNewList}>
+                                    <div class="flex items-center h-5">
+                                        <input id={`helper-radio-Nova Lista-list`} name="helper-radio" type="radio" value="" class="hidden peer"/>
+                                    </div>
+                                    <div class="">
+                                        <label for={`helper-radio-Nova Lista-list`} class="cursor-pointer font-medium text-center">
+                                            <div>+ Nova Lista</div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+
                         </div>
 
                         <div className='prose w-screen mr-10 mt-5' style={{height: '200vh'}}>                

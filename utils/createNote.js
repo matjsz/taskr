@@ -1,4 +1,4 @@
-import { doc, addDoc, collection } from 'firebase/firestore'
+import { doc, addDoc, collection, query, where } from 'firebase/firestore'
 import { db } from './firebase'
 
 const createNote = async (owner) => {
@@ -12,13 +12,15 @@ const createNote = async (owner) => {
     }
 
     const ref = await addDoc(collection(db, "notes"), {
-            banner: getRandomColor(),
-            content: "Olá! Esta é sua nova anotação.",
-            createdOn: new Date(),
-            owner: owner,
-            title: "Nova anotação",
-            updatedOn: new Date()
-        })
+        banner: getRandomColor(),
+        content: "Olá! Esta é sua nova anotação.",
+        createdOn: new Date(),
+        owner: owner,
+        title: "Nova anotação",
+        updatedOn: new Date(),
+        tag: 'none',
+        list: 'none'
+    })
 
     return ref.id
 }
