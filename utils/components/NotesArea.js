@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { getAllNotes } from "../getAllNotes"
 import { db } from "../firebase"
-import { doc, getDoc } from "firebase/firestore"
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore"
 import { getAllLists } from "../getAllLists"
 
 export default function NotesArea(props){
@@ -27,24 +27,20 @@ export default function NotesArea(props){
 
     useEffect(() => {
         if(read){
+            var ns = []
+
             if(props.listID != 'none'){
-                getAllLists(props.owner)
-                .then((lists) => {
-                    lists.forEach((list) => {
-                        if(list.id == props.listID){
-                            var ns = []
-
-                            list.data.notes.forEach((note) => {
-                                getDoc(doc(db, "notes", note)).then((nt) => {
-                                    ns.push({id: nt.id, data: nt.data()})
-                                    changeNotes(ns)
-                                })
-                            })
-
-                        }
+                var notes = []
+                const notesRef = collection(db, "notes")
+                const q = query(notesRef, where("list", "==", props.listID))
+                getDocs(q)
+                    .then((snap) => {
+                        snap.forEach((doc) => {
+                            ns.push({id: doc.id, data: doc.data()})
+                        })
+                        changeNotes(ns)
+                        changeRead(false)
                     })
-                    changeRead(false)
-                })
             } else{
                 getAllNotes(props.owner)
                     .then((ns) => {
