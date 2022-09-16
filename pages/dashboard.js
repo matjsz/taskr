@@ -8,7 +8,7 @@ import NotesArea from '../utils/components/NotesArea'
 import Loading from '../utils/components/Loading'
 import { getAllLists } from '../utils/getAllLists'
 import { getAllNotes } from '../utils/getAllNotes'
-import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, onSnapshot, query, updateDoc, where } from 'firebase/firestore'
 import { removeFromList } from '../utils/removeFromList'
 import { addToList } from '../utils/addToList'
 
@@ -18,19 +18,36 @@ export default function Dashboard() {
     const [lists, changeLists] = useState([])
     const [notes, changeNotes] = useState([])
     const [user, changeUser] = useState({})
+    const [first, changeFirst] = useState(true)
 
     useEffect(() => {
         // Checa se o usuário está logado ou não, caso não esteja ele é redirecionado para a página de autenticação (auth.js ou URL: /auth)
         onAuthStateChanged(auth, (u) => {
             if(u){
                 changeLogged(true)
-                getAllLists(u.uid)
-                    .then((ls) => {changeLists(ls)})
-                getAllNotes(u.uid)
-                    .then((ns) => {changeNotes(ns)})
                 changeUser(u)
-
-                console.log(u)
+                
+                if(first){
+                    const notesRef = collection(db, "notes")
+                    const q = query(notesRef, where("owner", "==", u.uid))
+                    onSnapshot(q, (query) => {
+                        const notes = []
+                        query.forEach((doc) => {
+                            notes.push({id: doc.id, data: doc.data()})
+                        })    
+                        changeNotes(notes)
+                    })
+                    const listsRef = collection(db, "lists")
+                    const q2 = query(listsRef, where("owner", "==", u.uid))
+                    onSnapshot(q2, (query) => {
+                        const lists = []
+                        query.forEach((doc) => {
+                            lists.push({id: doc.id, data: doc.data()})
+                        })    
+                        changeLists(lists)
+                    })
+                    changeFirst(false)
+                }
             } else{
                 Router.push('/auth')
             }
@@ -45,6 +62,7 @@ export default function Dashboard() {
                         list: 'none'
                     }).then(() => {
                         deleteDoc(doc(db, "lists", listID))
+                        window.location.reload()
                     })
                 })
             })
@@ -146,25 +164,24 @@ export default function Dashboard() {
 
                                     <div>
                                         {
-                                            notes.length > 0 ? notes.map((note) => {
-                                                return note.data.list == 'none' ? <h3 className="text-1xl text-white sm:text-2xl mb-4">Anotações sem lista</h3> : <></>
-                                            }) : <></>
-                                        }
-                                        {
-                                            notes.length > 0 ? notes.map((note) => {
-                                                return note.data.list == 'none' ? <>
+                                            notes.length > 0 ?
+                                                <>
+                                                <h3 className="text-1xl text-white sm:text-2xl mb-4">Anotações sem lista</h3>
+                                                {
                                                     <div className="grid mb-4 grid-cols-2 gap-4 sm:grid-cols-3">
                                                         <NotesArea owner={user.uid} listID='none' />
                                                     </div>
-                                                </> : <></>
-                                            }) : <section class="bg-teal-700">
-                                            <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
-                                                <div class="mx-auto max-w-screen-sm text-center">
-                                                    <p class="mb-4 text-3xl tracking-tight font-bold text-white md:text-4xl">Ainda não há anotações.</p>
-                                                    <p class="mb-4 text-lg font-light text-white">Crie uma nova anotação para começar sua jornada!</p>
-                                                </div>   
-                                            </div>
-                                        </section>
+                                                }
+                                                </>
+                                            :
+                                                <section class="bg-teal-700">
+                                                    <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
+                                                        <div class="mx-auto max-w-screen-sm text-center">
+                                                            <p class="mb-4 text-3xl tracking-tight font-bold text-white md:text-4xl">Ainda não há anotações.</p>
+                                                            <p class="mb-4 text-lg font-light text-white">Crie uma nova anotação para começar sua jornada!</p>
+                                                        </div>   
+                                                    </div>
+                                                </section>
                                         }
                                         {
                                             lists.map((list) => {

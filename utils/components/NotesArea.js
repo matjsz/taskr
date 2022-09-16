@@ -7,7 +7,12 @@ import { getAllLists } from "../getAllLists"
 export default function NotesArea(props){
     const [notes, changeNotes] = useState([])
     const [read, changeRead] = useState(true)
-    const [tagData, changeTagData] = useState({})
+    const [tagData, changeTagData] = useState({
+        done: 'Feito',
+        undone: 'Fazer',
+        doing: 'Fazendo',
+        none: 'Nenhum'
+    })
 
     const getTagColor = (tag) => {
         const tags = {
@@ -35,7 +40,6 @@ export default function NotesArea(props){
                                     changeNotes(ns)
                                 })
                                 changeRead(false)
-                                getDoc(doc(db, "tags", props.owner)).then((tag) => {changeTagData(tag.data())})
                             })
                         }
                     })
@@ -45,7 +49,6 @@ export default function NotesArea(props){
                     .then((ns) => {
                         changeNotes(ns)
                         changeRead(false)
-                        getDoc(doc(db, "tags", props.owner)).then((tag) => {changeTagData(tag.data())})
                     })
             }
         }

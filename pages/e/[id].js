@@ -34,7 +34,23 @@ export default function NewNote() {
     const [listData, changeListData] = useState({})
     const [listName, changeListName] = useState('')
     const [tagDoc, changeTagDoc] = useState({})
-    const [tagData, changeTagData] = useState([])
+    const [tagData, changeTagData] = useState([{
+        name: 'Feito',
+        color: 'green',
+        value: 'done'
+    }, {
+        name: 'Fazendo',
+        color: 'orange',
+        value: 'doing'
+    }, {
+        name: 'Fazer',
+        color: 'red',
+        value: 'undone'
+    }, {
+        name: 'Nenhum',
+        color: 'gray',
+        value: 'none'
+    }])
     const [tagName, changeTagName] = useState('')
     const [tagInput, changeTagInput] = useState('')
     const [listInput, changeListInput] = useState('')
@@ -52,20 +68,6 @@ export default function NewNote() {
                                 changeTitle(docSnap.data().title)
                                 changeTagSelected(docSnap.data().tag)
                                 changeListSelected(docSnap.data().list)
-                                
-                                getDoc(doc(db, "tags", user.uid))
-                                    .then((tag) => {
-                                        if(tag.exists()){
-                                            console.log(tag.data().tags)
-                                            changeTagData(tag.data().tags)
-                                            changeTagDoc(tag.data())
-                                            changeTagName(tag.data()[docSnap.data().tag])
-                                            changeTagInput(tag.data()[docSnap.data().tag])   
-                                        } else{
-                                            changeTagData({name: 'Nenhuma', color: 'gray'})
-                                        }
-                                    })
-                                    .catch((e) => {})
 
                                 if(docSnap.data().list == "none"){
                                     changeListData({name: 'Nenhuma'})
@@ -132,16 +134,13 @@ export default function NewNote() {
 
     const changeTag = (value) => {
         changeTagSelected(value)
-        changeTagInput(tagDoc[value])
     }
 
-    const handleNewList = (e) => {
-        createList(user.uid)
+    const handleNewList = async (e) => {
+        await createList(user.uid)
 
-        getAllLists(user.uid)
-            .then((lists) => {
-                changeListsData(lists)
-            })
+        const lists = await getAllLists(user.uid)
+        changeListsData(lists)
     }
 
     const changeList = (value, name) => {
@@ -150,82 +149,23 @@ export default function NewNote() {
         changeListInput(name)
     }
 
-    const saveChanges = () => {
-        updateDoc(doc(db, "notes", id), {
+    const saveChanges = async () => {
+        await updateDoc(doc(db, "notes", id), {
             title: titleContent,
             content: editorContent,
             updatedOn: new Date(),
             tag: tagSelected,
             list: listSelected
         })
-        .catch((e) => {})
-
-        if(tagSelected == 'doing'){
-            var t = tagDoc.tags[2]
-            updateDoc(doc(db, "tags", user.uid), {
-                "doing": tagInput,
-                "tags": arrayRemove(t)
-            }).then(() => {
-                t.name = tagInput
-
-                updateDoc(doc(db, "tags", user.uid), {
-                    "doing": tagInput,
-                    "tags": arrayUnion(t)
-                })
-            })
-        }
-        if(tagSelected == 'done'){
-            var t = tagDoc.tags[0]
-            updateDoc(doc(db, "tags", user.uid), {
-                "done": tagInput,
-                "tags": arrayRemove(t)
-            }).then(() => {
-                t.name = tagInput
-
-                updateDoc(doc(db, "tags", user.uid), {
-                    "done": tagInput,
-                    "tags": arrayUnion(t)
-                })
-            })
-        }
-        if(tagSelected == 'none'){
-            var t = tagDoc.tags[3]
-            updateDoc(doc(db, "tags", user.uid), {
-                none: tagInput,
-                tags: arrayRemove(t)
-            }).then(() => {
-                t.name = tagInput
-                updateDoc(doc(db, "tags", user.uid), {
-                    none: tagInput,
-                    tags: arrayUnion(t)
-                })
-            })
-        }
-        if(tagSelected == 'undone'){
-            var t = tagDoc.tags[1] 
-            updateDoc(doc(db, "tags", user.uid), {
-                "undone": tagInput,
-                "tags": arrayRemove(t)
-            }).then(() => {
-                t.name = tagInput
-
-                updateDoc(doc(db, "tags", user.uid), {
-                    "undone": tagInput,
-                    "tags": arrayUnion(t)
-                })
-            })
-        }
 
         if(listSelected != 'none'){
-            updateDoc(doc(db, "lists", listSelected), {
+            await updateDoc(doc(db, "lists", listSelected), {
                 name: listInput
             })
         }
         
-        removeFromList(docData.list, id)
-            .catch((e) => {})
-        addToList(listSelected, id)
-            .catch((e) => {})
+        await removeFromList(docData.list, id)
+        await addToList(listSelected, id)
 
         changeFirstLoad(true)
     }
@@ -321,7 +261,7 @@ export default function NewNote() {
                             
                             <div class="sm:absolute right-5">
                             <button id="dropdownHelperRadioButton" data-dropdown-toggle="dropdownHelperRadio" class={`ml-1 mt-5 sm:mt-0 bg-${getTagColor(tagSelected)}-200 hover:bg-${getTagColor(tagSelected)}-300 focus:ring-4 focus:outline-none focus:ring-${getTagColor(tagSelected)}-100 text-${getTagColor(tagSelected)}-900 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center`} type="button"> 
-                                <input className={`bg-${getTagColor(tagSelected)}-200 hover:bg-${getTagColor(tagSelected)}-300 text-${getTagColor(tagSelected)}-900`} value={tagInput} onChange={handleTagInput} />
+                                {tagData.map((tag) => {if(tag.value == tagSelected){return <>{tag.name}</>}})}
                                 <svg class="ml-2 w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             <div id="dropdownHelperRadio" class="hidden z-10 bg-white rounded divide-y divide-gray-100 shadow" data-popper-reference-hidden="" data-popper-escaped="" data-popper-placement="bottom" style={{position: 'absolute', inset: '0px auto auto 0px', margin: '0px', transform: 'translate(0px, 10px)'}}>
