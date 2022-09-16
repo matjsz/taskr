@@ -39,10 +39,11 @@ export default function NotesArea(props){
                                     ns.push({id: nt.id, data: nt.data()})
                                     changeNotes(ns)
                                 })
-                                changeRead(false)
                             })
+
                         }
                     })
+                    changeRead(false)
                 })
             } else{
                 getAllNotes(props.owner)
