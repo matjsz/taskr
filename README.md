@@ -1,34 +1,65 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/othneildrew/Best-README-Template">
+    <img src="public/logo.png" alt="Logo" width="300">
+  </a>
 
-## Getting Started
+  <h3 align="center">Taskr</h3>
 
-First, run the development server:
+  <p align="center">
+    A website for you to organize your notes and thoughts in a simple and clean way.
+    <!-- <br /> -->
+    <!-- <a href="docs here :)"><strong>Explore the docs »</strong></a> UNDER DEVELOPMENT -->
+    <br />
+    <br />
+    ·
+    <a href="https://github.com/matjsilva/taskr/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/matjsilva/taskr/issues">Request Feature</a>
+  </p>
+</div>
 
-```bash
-npm run dev
-# or
-yarn dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#development-state">Getting Started</a>
+    </li>
+    <li><a href="#api-usage">Usage</a></li>
+    <li><a href="#contact">Roadmap</a></li>
+  </ol>
+</details>
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
 
-## Learn More
+<!-- ABOUT THE PROJECT -->
+## About The Project
 
-To learn more about Next.js, take a look at the following resources:
+Taskr was inspired by great website with the same purpose, such as Notion, Evernote and Trello, but Taskr has its own beauty, although it has the same systems as those website mentioned, it also have soemthing special: it's made only by one person.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Built With
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+* [Next.js](https://nextjs.org/)
+* [React.js](https://reactjs.org/)
+* [Flowbite](https://flowbite.com)
+* [Firebase](https://https://firebase.google.com)
 
-## Deploy on Vercel
+<!-- DEVELOPMENT STATE -->
+## Development State
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Taskr is no longer under development, it's now released and complete! :)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+<!-- CONTACT -->
+## Contact
+
+Matheus Silva "matjs" - [@matjs_](https://twitter.com/matjs_) - matheusjgsilva42@gmail.com
